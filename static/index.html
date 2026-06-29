@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocMind — Document Intelligence</title>
+<style>
+:root {
+  --bg:         #080c1e;
+  --surf:       #0f1428;
+  --surf2:      #171d38;
+  --border:     #242d52;
+  --accent:     #5b7bf5;
+  --accent-dim: rgba(91,123,245,.13);
+  --text:       #dce3f8;
+  --text2:      #6876a8;
+  --crit:       #f04460;
+  --high:       #f07040;
+  --med:        #e8b840;
+  --low:        #38d4a0;
+  --r:          8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Top bar ───────────────────────────────────────── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  height: 52px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surf);
+  flex-shrink: 0;
+}
+
+.logo {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.3px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.logo-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.topbar-spacer { flex: 1; }
+
+.tenant-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tenant-label {
+  font-size: 11px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .09em;
+}
+
+.tenant-input {
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: var(--r);
+  width: 164px;
+  outline: none;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  transition: border-color .15s;
+}
+.tenant-input:focus { border-color: var(--accent); }
+
+/* ── Buttons ───────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--r);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity .15s, background .15s, border-color .15s;
+  font-family: inherit;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #6e8df7; }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--text2); }
+
+.btn-icon {
+  background: transparent;
+  color: var(--text2);
+  border: none;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 5px;
+}
+.btn-icon:hover { background: rgba(240,68,96,.1); color: var(--crit); }
+
+/* ── Layout ────────────────────────────────────────── */
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Sidebar ───────────────────────────────────────── */
+.sidebar {
+  width: 264px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surf);
+}
+
+.sidebar-section {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text2);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Drop zone ─────────────────────────────────────── */
+.dropzone {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r);
+  padding: 22px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.dropzone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.dropzone-icon { font-size: 22px; margin-bottom: 8px; }
+.dropzone-text {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+.dropzone-text strong { color: var(--text); }
+
+.upload-msg {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text2);
+  display: none;
+}
+.upload-msg.visible { display: block; }
+
+/* ── Docs list ─────────────────────────────────────── */
+.docs-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.docs-empty {
+  padding: 28px 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.7;
+}
+
+.doc-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r);
+  border: 1px solid transparent;
+  transition: background .15s, border-color .15s;
+}
+.doc-item:hover { background: var(--surf2); border-color: var(--border); }
+
+.doc-icon { font-size: 14px; flex-shrink: 0; }
+.doc-info { flex: 1; min-width: 0; }
+.doc-name {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-meta {
+  font-size: 10px;
+  color: var(--text2);
+  font-variant-numeric: tabular-nums;
+}
+.doc-chunks {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ── Content ───────────────────────────────────────── */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Query panel ───────────────────────────────────── */
+.query-panel {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.query-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.query-input {
+  flex: 1;
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+  padding: 10px 14px;
+  border-radius: var(--r);
+  outline: none;
+  resize: none;
+  height: 46px;
+  line-height: 1.5;
+  font-family: inherit;
+  transition: border-color .2s;
+}
+.query-input:focus { border-color: var(--accent); }
+.query-input::placeholder { color: var(--text2); }
+
+.query-opts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.mode-toggle {
+  display: flex;
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.mode-btn {
+  padding: 5px 13px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text2);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+}
+.mode-btn.active { background: var(--accent); color: #fff; }
+
+.opt-label { font-size: 12px; color: var(--text2); }
+
+.topk-input {
+  width: 50px;
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  text-align: center;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  font-family: inherit;
+}
+
+/* ── Results ───────────────────────────────────────── */
+.results-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text2);
+  user-select: none;
+}
+.placeholder-icon { font-size: 38px; opacity: .35; }
+.placeholder-text { font-size: 13px; }
+
+/* ── Answer card ───────────────────────────────────── */
+.answer-card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.answer-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surf2);
+}
+.answer-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.answer-q {
+  font-size: 12px;
+  color: var(--text2);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.answer-body {
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--text);
+}
+
+/* ── Sources ───────────────────────────────────────── */
+.sources-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--text2);
+}
+.sources-count {
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.source-card {
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color .15s;
+}
+.source-card:hover { border-color: #38406a; }
+
+.source-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.priority-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.CRITICAL { background: rgba(240,68,96,.14); color: var(--crit); }
+.HIGH     { background: rgba(240,112,64,.14); color: var(--high); }
+.MEDIUM   { background: rgba(232,184,64,.14); color: var(--med); }
+.LOW      { background: rgba(56,212,160,.14); color: var(--low); }
+
+.dept-badge {
+  font-size: 10px;
+  color: var(--text2);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.score-area {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.score-track {
+  width: 56px; height: 3px;
+  background: var(--surf2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.score-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+.score-val {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text2);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+}
+
+.source-text {
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text2);
+}
+.source-action {
+  font-size: 12px;
+  padding: 7px 10px;
+  background: var(--surf2);
+  border-radius: 6px;
+  color: var(--text);
+  border-left: 3px solid var(--accent);
+  line-height: 1.5;
+}
+
+/* ── Loading dots ──────────────────────────────────── */
+.dots {
+  display: inline-flex;
+  gap: 5px;
+  padding: 4px 0;
+}
+.dots span {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: dot .8s infinite;
+}
+.dots span:nth-child(2) { animation-delay: .15s; }
+.dots span:nth-child(3) { animation-delay: .3s; }
+@keyframes dot {
+  0%, 80%, 100% { transform: translateY(0); opacity: .4; }
+  40%           { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ── Error card ────────────────────────────────────── */
+.error-card {
+  background: rgba(240,68,96,.07);
+  border: 1px solid rgba(240,68,96,.25);
+  border-radius: var(--r);
+  padding: 14px;
+  font-size: 13px;
+  color: var(--crit);
+}
+
+/* ── Toast ─────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 10px 16px;
+  font-size: 13px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .2s, transform .2s;
+  z-index: 99;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { border-color: var(--low); }
+.toast.error   { border-color: var(--crit); }
+
+/* ── Scrollbar ─────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-dot"></div>
+    DocMind
+  </div>
+  <div class="topbar-spacer"></div>
+  <div class="tenant-area">
+    <span class="tenant-label">Tenant</span>
+    <input class="tenant-input" id="tenantInput" placeholder="your-org-id" autocomplete="off" spellcheck="false"
+      onkeydown="if(event.key==='Enter') saveTenant()">
+    <button class="btn btn-ghost" onclick="saveTenant()">Set</button>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">Upload PDF</div>
+      <div class="dropzone" id="dropzone"
+        ondragover="handleDragOver(event)"
+        ondragleave="handleDragLeave(event)"
+        ondrop="handleDrop(event)">
+        <input type="file" accept=".pdf" onchange="handleFileSelect(event)">
+        <div class="dropzone-icon">📄</div>
+        <div class="dropzone-text"><strong>Drop PDF here</strong><br>or click to browse</div>
+      </div>
+      <div class="upload-msg" id="uploadMsg">Uploading and indexing…</div>
+    </div>
+
+    <div class="sidebar-section" style="padding-bottom: 10px;">
+      <div class="sidebar-title">
+        Documents
+        <span id="docCount" style="background:var(--surf2);border:1px solid var(--border);padding:1px 7px;border-radius:10px;font-variant-numeric:tabular-nums;">0</span>
+      </div>
+    </div>
+
+    <div class="docs-scroll" id="docsList">
+      <div class="docs-empty" id="docsEmpty">No documents yet.<br>Upload a PDF to get started.</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="query-panel">
+      <div class="query-row">
+        <textarea class="query-input" id="queryInput"
+          placeholder="Ask anything about your documents…"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitQuery()}"></textarea>
+        <button class="btn btn-primary" id="queryBtn" onclick="submitQuery()">Ask →</button>
+      </div>
+      <div class="query-opts">
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="modeRag"    onclick="setMode('rag')">RAG</button>
+          <button class="mode-btn"        id="modeSearch" onclick="setMode('search')">Search only</button>
+        </div>
+        <span class="opt-label">Top</span>
+        <input class="topk-input" id="topkInput" type="number" value="5" min="1" max="20">
+        <span class="opt-label">results</span>
+      </div>
+    </div>
+
+    <div class="results-area" id="resultsArea">
+      <div class="placeholder" id="placeholder">
+        <div class="placeholder-icon">🔍</div>
+        <div class="placeholder-text">Ask a question to query your documents</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Store ──────────────────────────────────────────────────────────────────
+const Store = {
+  getTenant: () => localStorage.getItem('dm_tenant') || '',
+  setTenant: (v) => localStorage.setItem('dm_tenant', v),
+  getDocs:   () => JSON.parse(localStorage.getItem('dm_docs') || '[]'),
+  setDocs:   (d) => localStorage.setItem('dm_docs', JSON.stringify(d)),
+  addDoc:    (doc) => { const d = Store.getDocs().filter(x => x.doc_id !== doc.doc_id); Store.setDocs([doc, ...d]) },
+  removeDoc: (id)  => Store.setDocs(Store.getDocs().filter(d => d.doc_id !== id))
+}
+
+let mode = 'rag'
+let busy = false
+
+// ── Init ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  const t = Store.getTenant()
+  if (t) document.getElementById('tenantInput').value = t
+  renderDocs()
+})
+
+// ── Tenant ─────────────────────────────────────────────────────────────────
+function saveTenant() {
+  const v = document.getElementById('tenantInput').value.trim()
+  if (!v) { toast('Enter a tenant ID', 'error'); return }
+  Store.setTenant(v)
+  toast('Tenant set: ' + v, 'success')
+}
+
+function getTenant() {
+  const t = Store.getTenant()
+  if (!t) { toast('Set a Tenant ID first', 'error'); return null }
+  return t
+}
+
+function headers(extra = {}) {
+  return { 'X-Tenant-Id': Store.getTenant(), ...extra }
+}
+
+// ── Upload ─────────────────────────────────────────────────────────────────
+function handleDragOver(e) {
+  e.preventDefault()
+  document.getElementById('dropzone').classList.add('drag-over')
+}
+function handleDragLeave() {
+  document.getElementById('dropzone').classList.remove('drag-over')
+}
+function handleDrop(e) {
+  e.preventDefault()
+  document.getElementById('dropzone').classList.remove('drag-over')
+  const f = e.dataTransfer.files[0]
+  if (f) uploadFile(f)
+}
+function handleFileSelect(e) {
+  const f = e.target.files[0]
+  if (f) uploadFile(f)
+  e.target.value = ''
+}
+
+async function uploadFile(file) {
+  if (!file.name.endsWith('.pdf')) { toast('Only PDF files supported', 'error'); return }
+  const tid = getTenant()
+  if (!tid) return
+
+  const msg = document.getElementById('uploadMsg')
+  msg.textContent = `Indexing ${file.name}…`
+  msg.classList.add('visible')
+
+  const form = new FormData()
+  form.append('file', file)
+
+  try {
+    const res  = await fetch('/documents/upload', { method: 'POST', headers: headers(), body: form })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || 'Upload failed')
+    Store.addDoc({ doc_id: data.doc_id, filename: file.name, chunks: data.chunks_indexed, ts: new Date().toLocaleDateString() })
+    renderDocs()
+    toast(`Indexed ${data.chunks_indexed} chunks ✓`, 'success')
+  } catch (err) {
+    toast(err.message, 'error')
+  } finally {
+    msg.classList.remove('visible')
+  }
+}
+
+async function deleteDoc(docId, filename) {
+  if (!getTenant()) return
+  try {
+    await fetch(`/documents/${docId}`, { method: 'DELETE', headers: headers() })
+    Store.removeDoc(docId)
+    renderDocs()
+    toast(`Removed ${filename}`, 'success')
+  } catch {
+    toast('Delete failed', 'error')
+  }
+}
+
+function renderDocs() {
+  const docs  = Store.getDocs()
+  const list  = document.getElementById('docsList')
+  const empty = document.getElementById('docsEmpty')
+  document.getElementById('docCount').textContent = docs.length
+  empty.style.display = docs.length ? 'none' : 'block'
+  list.querySelectorAll('.doc-item').forEach(el => el.remove())
+  docs.forEach(doc => {
+    const el = document.createElement('div')
+    el.className = 'doc-item'
+    el.innerHTML = `
+      <div class="doc-icon">📄</div>
+      <div class="doc-info">
+        <div class="doc-name" title="${esc(doc.filename)}">${esc(doc.filename)}</div>
+        <div class="doc-meta">${esc(doc.ts)}</div>
+      </div>
+      <span class="doc-chunks">${doc.chunks}c</span>
+      <button class="btn btn-icon" title="Remove" onclick="deleteDoc('${doc.doc_id}','${doc.filename.replace(/'/g,"\\'")}')">✕</button>
+    `
+    list.appendChild(el)
+  })
+}
+
+// ── Query ──────────────────────────────────────────────────────────────────
+function setMode(m) {
+  mode = m
+  document.getElementById('modeRag').classList.toggle('active', m === 'rag')
+  document.getElementById('modeSearch').classList.toggle('active', m === 'search')
+}
+
+async function submitQuery() {
+  if (busy) return
+  if (!getTenant()) return
+  const query = document.getElementById('queryInput').value.trim()
+  if (!query) { toast('Enter a question', 'error'); return }
+  const topK = parseInt(document.getElementById('topkInput').value) || 5
+
+  busy = true
+  document.getElementById('queryBtn').disabled = true
+  showLoading(query)
+
+  const endpoint = mode === 'rag' ? '/rag' : '/search'
+  try {
+    const res  = await fetch(endpoint, {
+      method: 'POST',
+      headers: { ...headers(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, top_k: topK })
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || 'Query failed')
+    renderResults(query, data)
+  } catch (err) {
+    document.getElementById('resultsArea').innerHTML = `<div class="error-card">⚠ ${esc(err.message)}</div>`
+  } finally {
+    busy = false
+    document.getElementById('queryBtn').disabled = false
+  }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function showLoading(query) {
+  document.getElementById('resultsArea').innerHTML = `
+    <div class="answer-card">
+      <div class="answer-head">
+        <span class="answer-badge">Thinking</span>
+        <span class="answer-q">${esc(query)}</span>
+      </div>
+      <div class="answer-body"><div class="dots"><span></span><span></span><span></span></div></div>
+    </div>`
+}
+
+function renderResults(query, data) {
+  const sources = data.results || data.sources || []
+  let html = ''
+
+  if (mode === 'rag' && data.answer) {
+    html += `
+      <div class="answer-card">
+        <div class="answer-head">
+          <span class="answer-badge">Answer</span>
+          <span class="answer-q">${esc(query)}</span>
+        </div>
+        <div class="answer-body">${esc(data.answer)}</div>
+      </div>`
+  }
+
+  if (sources.length) {
+    html += `<div class="sources-label">Sources <span class="sources-count">${sources.length}</span></div>`
+    sources.forEach(s => {
+      const p = (s.metadata?.priority || '').toUpperCase()
+      const d = s.metadata?.department || ''
+      const a = s.metadata?.action || ''
+      const score = s.score || 0
+      html += `
+        <div class="source-card">
+          <div class="source-top">
+            ${p ? `<span class="priority-badge ${p}">${p}</span>` : ''}
+            ${d ? `<span class="dept-badge">${esc(d)}</span>` : ''}
+            <div class="score-area">
+              <div class="score-track"><div class="score-fill" style="width:${Math.round(score*100)}%"></div></div>
+              <span class="score-val">${score.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="source-text">${esc(s.text)}</div>
+          ${a ? `<div class="source-action">→ ${esc(a)}</div>` : ''}
+        </div>`
+    })
+  }
+
+  document.getElementById('resultsArea').innerHTML = html || '<div class="error-card">No results found</div>'
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+let toastTmr
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast')
+  el.textContent = (type === 'success' ? '✓ ' : '⚠ ') + msg
+  el.className = `toast show ${type}`
+  clearTimeout(toastTmr)
+  toastTmr = setTimeout(() => el.className = 'toast', 2800)
+}
+</script>
+</body>
+</html>
