@@ -1,0 +1,12 @@
+{
+  "bb7351d77c": {
+    "id": "bb7351d77c",
+    "name": "test123",
+    "tenant_id": "sktest",
+    "system_prompt": "You are test123, a helpful AI assistant. Answer questions using only the provided context. Be concise and accurate.",
+    "accent_color": "#5cf079",
+    "doc_ids": [
+      "ab0f0097-0b0f-47d8-bfdf-6ab920c8efcf"
+    ]
+  }
+}

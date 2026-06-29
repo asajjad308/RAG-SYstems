@@ -13,10 +13,8 @@ def get_client():
 
 
 def get_collection(tenant_id: str):
-    # Each tenant gets an isolated collection
-    name = f"tenant_{tenant_id}"
     return get_client().get_or_create_collection(
-        name=name,
+        name=f"tenant_{tenant_id}",
         metadata={"hnsw:space": "cosine"},
     )
 
@@ -27,29 +25,38 @@ def index_pdf(pdf_path: str, tenant_id: str, doc_id: str) -> int:
         raise ValueError("No text could be extracted from this PDF")
     model = get_model()
 
-    texts = [c["text"] for c in chunks]
-    vectors = model.encode(texts, show_progress_bar=False).tolist()
-    # Prefix chunk IDs with doc_id so multiple docs don't collide
-    ids = [f"{doc_id}_{c['id']}" for c in chunks]
+    texts     = [c["text"] for c in chunks]
+    vectors   = model.encode(texts, show_progress_bar=False).tolist()
+    ids       = [f"{doc_id}_{c['id']}" for c in chunks]
     metadatas = [{**c["metadata"], "doc_id": doc_id} for c in chunks]
 
-    get_collection(tenant_id).upsert(
-        ids=ids,
-        embeddings=vectors,
-        documents=texts,
-        metadatas=metadatas,
-    )
+    get_collection(tenant_id).upsert(ids=ids, embeddings=vectors, documents=texts, metadatas=metadatas)
     return len(chunks)
 
 
-def search(query: str, tenant_id: str, top_k: int = 5, doc_id: str | None = None) -> list[dict]:
+def search(query: str, tenant_id: str, top_k: int = 5, doc_ids: list[str] | None = None) -> list[dict]:
     model = get_model()
     query_vector = model.encode([query]).tolist()
 
-    where = {"doc_id": doc_id} if doc_id else None
-    results = get_collection(tenant_id).query(
+    # Build ChromaDB where filter
+    if doc_ids and len(doc_ids) == 1:
+        where = {"doc_id": doc_ids[0]}
+    elif doc_ids and len(doc_ids) > 1:
+        where = {"doc_id": {"$in": doc_ids}}
+    else:
+        where = None
+
+    collection = get_collection(tenant_id)
+
+    # n_results can't exceed collection size
+    count = collection.count()
+    if count == 0:
+        return []
+    n = min(top_k, count)
+
+    results = collection.query(
         query_embeddings=query_vector,
-        n_results=top_k,
+        n_results=n,
         include=["documents", "metadatas", "distances"],
         where=where,
     )
